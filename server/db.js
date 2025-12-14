@@ -8,6 +8,11 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    matric_no TEXT,
+    level TEXT,
+    department TEXT,
+    course TEXT,
+    photo TEXT,
     descriptor TEXT NOT NULL,
     section TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -16,6 +21,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    type TEXT DEFAULT 'in', 
     start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     end_time TIMESTAMP,
     is_active INTEGER DEFAULT 1
@@ -33,15 +39,31 @@ db.exec(`
   );
 `);
 
-const registerUser = (name, descriptor, section = '') => {
-  const stmt = db.prepare('INSERT INTO users (name, descriptor, section) VALUES (?, ?, ?)');
-  const info = stmt.run(name, descriptor, section);
+const registerUser = (user) => {
+  const { name, matric_no, level, department, course, photo, descriptor, section } = user;
+  const stmt = db.prepare('INSERT INTO users (name, matric_no, level, department, course, photo, descriptor, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const info = stmt.run(name, matric_no, level, department, course, photo, descriptor, section);
   return info.lastInsertRowid;
 };
 
-const getAllUsers = () => {
-  const stmt = db.prepare('SELECT * FROM users');
-  return stmt.all();
+const getAllUsers = (search, sort) => {
+  // Format created_at as ISO UTC string
+  let query = "SELECT id, name, matric_no, level, department, course, photo, descriptor, section, strftime('%Y-%m-%dT%H:%M:%SZ', created_at) as created_at FROM users";
+  const params = [];
+
+  if (search) {
+    query += ' WHERE name LIKE ? OR matric_no LIKE ?';
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (sort === 'matric') {
+    query += ' ORDER BY matric_no ASC';
+  } else {
+    query += ' ORDER BY name ASC';
+  }
+
+  const stmt = db.prepare(query);
+  return stmt.all(...params);
 };
 
 const deleteUser = (id) => {
@@ -51,18 +73,28 @@ const deleteUser = (id) => {
 
 
 // Session Management
-const createSession = (name) => {
+const createSession = (name, type = 'in') => {
   // Deactivate all other sessions first
   db.prepare('UPDATE sessions SET is_active = 0').run();
-  const stmt = db.prepare('INSERT INTO sessions (name) VALUES (?)');
-  const info = stmt.run(name);
-  return { id: info.lastInsertRowid, name, is_active: 1 };
+  const stmt = db.prepare('INSERT INTO sessions (name, type) VALUES (?, ?)');
+  const info = stmt.run(name, type);
+  return { id: info.lastInsertRowid, name, type, is_active: 1 };
 };
 
 const getActiveSession = () => {
   const stmt = db.prepare('SELECT * FROM sessions WHERE is_active = 1 ORDER BY id DESC LIMIT 1');
   return stmt.get();
 };
+
+const getSessionHistory = () => {
+  const stmt = db.prepare('SELECT * FROM sessions ORDER BY start_time DESC LIMIT 50');
+  return stmt.all();
+};
+
+const deleteSession = (id) => {
+  const stmt = db.prepare('DELETE FROM sessions WHERE id = ?');
+  return stmt.run(id);
+}
 
 const toggleSession = (id, isActive) => {
   if (isActive) {
@@ -85,15 +117,24 @@ const checkDuplicate = (userId, sessionId, type) => {
   return !!stmt.get(userId, sessionId, type);
 };
 
-const getAttendanceLogs = () => {
-  const stmt = db.prepare(`
-    SELECT a.id, a.timestamp, a.type, a.image, u.name, s.name as session_name
+const getAttendanceLogs = (search) => {
+  // Use strftime to format as ISO8601 with T separator and Z suffix so JS Date parses it as UTC
+  let query = `
+    SELECT a.id, strftime('%Y-%m-%dT%H:%M:%SZ', a.timestamp) as timestamp, a.type, a.image, u.name, u.matric_no, u.level, u.department, s.name as session_name
     FROM attendance a 
     JOIN users u ON a.user_id = u.id 
     LEFT JOIN sessions s ON a.session_id = s.id
-    ORDER BY a.timestamp DESC
-  `);
-  return stmt.all();
+  `;
+
+  const params = [];
+  if (search) {
+    query += ' WHERE u.name LIKE ? OR u.matric_no LIKE ? OR date(a.timestamp) = ?';
+    params.push(`%${search}%`, `%${search}%`, search);
+  }
+
+  query += ' ORDER BY a.timestamp DESC';
+  const stmt = db.prepare(query);
+  return stmt.all(...params);
 };
 
 const deleteAttendance = (id) => {
@@ -113,6 +154,8 @@ module.exports = {
   deleteUser,
   createSession,
   getActiveSession,
+  getSessionHistory,
+  deleteSession,
   toggleSession,
   logAttendance,
   checkDuplicate,
@@ -120,3 +163,4 @@ module.exports = {
   deleteAttendance,
   deleteAttendanceByDate
 };
+

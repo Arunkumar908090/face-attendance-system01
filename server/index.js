@@ -13,13 +13,13 @@ const xlsx = require('xlsx');
 
 // Register a new user with face descriptor
 app.post('/api/register', (req, res) => {
-    const { name, descriptor, section } = req.body;
-    if (!name || !descriptor) {
-        return res.status(400).json({ error: 'Name and descriptor are required' });
+    const { name, matric_no, level, department, course, photo, descriptor, section } = req.body;
+    if (!name || !descriptor || !matric_no) { // Matric No is now required
+        return res.status(400).json({ error: 'Name, Matric No, and descriptor are required' });
     }
 
     try {
-        const userId = db.registerUser(name, JSON.stringify(descriptor), section);
+        const userId = db.registerUser({ name, matric_no, level, department, course, photo, descriptor: JSON.stringify(descriptor), section });
         res.json({ success: true, userId });
     } catch (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
@@ -29,10 +29,11 @@ app.post('/api/register', (req, res) => {
     }
 });
 
-// Load all users (for face matching on client)
+// Load all users (for face matching on client) - Support search & sort
 app.get('/api/users', (req, res) => {
     try {
-        const users = db.getAllUsers();
+        const { search, sort } = req.query;
+        const users = db.getAllUsers(search, sort);
         // Parse descriptors back to arrays
         const usersWithDescriptors = users.map(u => ({
             ...u,
@@ -56,10 +57,10 @@ app.delete('/api/users/:id', (req, res) => {
 
 // Sessions
 app.post('/api/sessions', (req, res) => {
-    const { name, action, id } = req.body;
+    const { name, type, action, id } = req.body;
     try {
         if (action === 'create') {
-            const session = db.createSession(name);
+            const session = db.createSession(name, type || 'in');
             res.json(session);
         } else if (action === 'toggle') {
             db.toggleSession(id, req.body.isActive);
@@ -81,6 +82,24 @@ app.get('/api/sessions/active', (req, res) => {
     }
 });
 
+app.get('/api/sessions/history', (req, res) => {
+    try {
+        const sessions = db.getSessionHistory();
+        res.json(sessions);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/sessions/:id', (req, res) => {
+    try {
+        db.deleteSession(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Log attendance
 app.post('/api/attendance', (req, res) => {
     const { userId, type, image } = req.body;
@@ -91,15 +110,25 @@ app.post('/api/attendance', (req, res) => {
 
     try {
         const activeSession = db.getActiveSession();
-        // Allow attendance even if no session is active (optional, could be strict)
-        const sessionId = activeSession ? activeSession.id : null;
 
-        // Duplicate check
-        if (sessionId && db.checkDuplicate(userId, sessionId, type)) {
-            return res.status(409).json({ error: 'Already signed in for this session' });
+        if (!activeSession) {
+            return res.status(403).json({ error: 'No active session. Please wait for lecturer to start a session.' });
         }
 
-        const entryId = db.logAttendance(userId, sessionId, type, image);
+        const sessionMode = activeSession.type;
+        // Force the type to match the session type
+        // The user request said "The sign in and sign out are all contained in a session"
+        // And "Sign in and sign out should be toggled by the admin not the user"
+        // So we strictly use the session's type.
+
+        const sessionId = activeSession.id;
+
+        // Duplicate check
+        if (db.checkDuplicate(userId, sessionId, sessionMode)) {
+            return res.status(409).json({ error: 'Already marked for this session' });
+        }
+
+        const entryId = db.logAttendance(userId, sessionId, sessionMode, image);
         res.json({ success: true, entryId, session: activeSession });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -109,7 +138,8 @@ app.post('/api/attendance', (req, res) => {
 // Get attendance logs
 app.get('/api/attendance', (req, res) => {
     try {
-        const logs = db.getAttendanceLogs();
+        const { search } = req.query;
+        const logs = db.getAttendanceLogs(search);
         res.json(logs);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -143,11 +173,15 @@ app.get('/api/export', (req, res) => {
     try {
         const logs = db.getAttendanceLogs();
         const data = logs.map(l => ({
-            ID: l.id,
-            Name: l.name,
-            Time: new Date(l.timestamp).toLocaleString(),
-            Type: l.type,
-            Session: l.session_name || 'N/A'
+            'ID': l.id,
+            'Matric No': l.matric_no || 'N/A',
+            'Name': l.name,
+            'Department': l.department || 'N/A',
+            'Level': l.level || 'N/A',
+            'Course': l.course || 'N/A',
+            'Time': new Date(l.timestamp).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' }), // WAT GMT+1
+            'Type': l.type.toUpperCase(),
+            'Session': l.session_name || 'N/A'
         }));
 
         const wb = xlsx.utils.book_new();

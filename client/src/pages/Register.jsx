@@ -2,11 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from 'face-api.js';
 
 function Register() {
-    const [name, setName] = useState('');
+    const [formData, setFormData] = useState({
+        name: '',
+        matric_no: '',
+        level: '',
+        department: '',
+        course: ''
+    });
     const [initializing, setInitializing] = useState(true);
     const [faceDetected, setFaceDetected] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [capturedPhoto, setCapturedPhoto] = useState(null);
 
     const videoRef = useRef();
     const canvasRef = useRef();
@@ -24,7 +31,7 @@ function Register() {
                 startVideo();
             } catch (err) {
                 console.error("Model load error:", err);
-                setErrorMsg("Failed to load face models. Ensure they are in /public/models.");
+                setErrorMsg("Failed to load face models.");
             }
         };
         loadModels();
@@ -63,17 +70,26 @@ function Register() {
                 canvasRef.current.getContext('2d').clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
                 faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
 
-                if (detections.length > 0) {
-                    setFaceDetected(true);
-                } else {
-                    setFaceDetected(false);
-                }
+                setFaceDetected(detections.length > 0);
             }
         }, 100);
     };
 
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const capturePhoto = () => {
+        if (!videoRef.current) return null;
+        const canvas = document.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = 240;
+        canvas.getContext('2d').drawImage(videoRef.current, 0, 0, 320, 240);
+        return canvas.toDataURL('image/jpeg', 0.7);
+    };
+
     const handleRegister = async () => {
-        if (!name) return setErrorMsg("Please enter a name.");
+        if (!formData.name || !formData.matric_no) return setErrorMsg("Name and Matric No are required.");
         if (!faceDetected) return setErrorMsg("No face detected.");
 
         // Capture single descriptor
@@ -82,18 +98,21 @@ function Register() {
             .withFaceDescriptor();
 
         if (detection) {
-            const descriptor = Array.from(detection.descriptor); // Convert Float32Array to Array
+            const descriptor = Array.from(detection.descriptor);
+            const photo = capturePhoto();
+            setCapturedPhoto(photo);
 
             try {
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, descriptor })
+                    body: JSON.stringify({ ...formData, descriptor, photo })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    setSuccessMsg(`User ${name} registered successfully!`);
-                    setName('');
+                    setSuccessMsg(`User ${formData.name} registered successfully!`);
+                    setFormData({ name: '', matric_no: '', level: '', department: '', course: '' });
+                    setCapturedPhoto(null);
                 } else {
                     setErrorMsg(data.error || 'Registration failed.');
                 }
@@ -104,33 +123,39 @@ function Register() {
     };
 
     return (
-        <div className="page-container">
-            <h2>Register New User</h2>
-            <div className="card">
+        <div className="page-container" style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: '2rem' }}>
+            <div className="card" style={{ maxWidth: '400px', width: '100%' }}>
+                <h2>Register User</h2>
                 {errorMsg && <div style={{ color: 'var(--error)', marginBottom: '1rem' }}>{errorMsg}</div>}
                 {successMsg && <div style={{ color: 'var(--success)', marginBottom: '1rem' }}>{successMsg}</div>}
 
-                <input
-                    type="text"
-                    placeholder="Enter Full Name"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                />
-
-                <div className="video-container" style={{ width: '100%', maxWidth: '640px', height: '480px', background: '#000' }}>
-                    {initializing && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>Loading AI...</div>}
-                    <video ref={videoRef} autoPlay muted onPlay={handleVideoPlay} width="640" height="480" />
-                    <canvas ref={canvasRef} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <input name="name" placeholder="Full Name *" value={formData.name} onChange={handleChange} />
+                    <input name="matric_no" placeholder="Matric No *" value={formData.matric_no} onChange={handleChange} />
+                    <input name="level" placeholder="Level (e.g., 400)" value={formData.level} onChange={handleChange} />
+                    <input name="department" placeholder="Department" value={formData.department} onChange={handleChange} />
+                    <input name="course" placeholder="Course of Study" value={formData.course} onChange={handleChange} />
                 </div>
 
                 <button
                     className="btn btn-primary"
-                    style={{ marginTop: '1rem', width: '100%' }}
+                    style={{ marginTop: '1.5rem', width: '100%' }}
                     onClick={handleRegister}
-                    disabled={!faceDetected || !name}
+                    disabled={!faceDetected || !formData.name || !formData.matric_no}
                 >
                     Capture & Register
                 </button>
+            </div>
+
+            <div className="video-container" style={{ width: '640px', height: '480px', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
+                {initializing && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white' }}>Loading AI...</div>}
+                <video ref={videoRef} autoPlay muted onPlay={handleVideoPlay} width="640" height="480" />
+                <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
+                {capturedPhoto && (
+                    <div style={{ position: 'absolute', bottom: '10px', right: '10px', border: '2px solid white', borderRadius: '4px' }}>
+                        <img src={capturedPhoto} width="100" />
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -6,7 +6,7 @@ function Attendance() {
     const [logs, setLogs] = useState([]);
     const [errorMsg, setErrorMsg] = useState('');
     const [session, setSession] = useState(null);
-    const [mode, setMode] = useState('in'); // 'in' or 'out'
+    // mode is now derived exclusively from the session
 
     const videoRef = useRef();
     const canvasRef = useRef();
@@ -39,7 +39,9 @@ function Attendance() {
                             [new Float32Array(user.descriptor)]
                         );
                     });
-                    matcherRef.current = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+                    // Increased threshold for strictness (lower is stricter)
+                    // Default was 0.6, trying 0.45 for better accuracy as requested
+                    matcherRef.current = new faceapi.FaceMatcher(labeledDescriptors, 0.45);
                 }
 
                 startVideo();
@@ -57,11 +59,19 @@ function Attendance() {
         };
     }, []);
 
+    // Poll for session status occasionally? Or just rely on initial load?
+    // User requested "Attendance cannot be started without a session"
+    // Let's poll active session every 10 seconds to detect mode changes
+    useEffect(() => {
+        const interval = setInterval(fetchActiveSession, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
     const fetchActiveSession = async () => {
         try {
             const res = await fetch('/api/sessions/active');
             const data = await res.json();
-            setSession(data);
+            setSession(data); // data is object or null
         } catch (err) {
             console.error("Failed to fetch session", err);
         }
@@ -77,6 +87,8 @@ function Attendance() {
     };
 
     const logAttendance = async (name, detectionBox) => {
+        if (!session) return; // Cannot log without session
+
         const now = Date.now();
         // Debounce: Only log once every minute per user
         if (lastLogRef.current[name] && (now - lastLogRef.current[name] < 60000)) {
@@ -90,13 +102,6 @@ function Attendance() {
             // Capture image
             let imageBase64 = null;
             if (videoRef.current && detectionBox) {
-                const captureCanvas = document.createElement('canvas');
-                captureCanvas.width = detectionBox.width + 100; // slightly larger
-                captureCanvas.height = detectionBox.height + 100;
-                const ctx = captureCanvas.getContext('2d');
-                // Draw only the face area (simplified, actually drawing whole frame resized might be better/easier logs)
-                // For simplicity, let's capture the whole frame but scaled down? Or just face.
-                // Let's capture the whole frame for context, but resized to save space
                 const logCanvas = document.createElement('canvas');
                 logCanvas.width = 320;
                 logCanvas.height = 240;
@@ -105,18 +110,21 @@ function Attendance() {
             }
 
             try {
+                // Determine mode from session
+                const currentMode = session.type || 'in';
+
                 const res = await fetch('/api/attendance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, type: mode, image: imageBase64 })
+                    body: JSON.stringify({ userId, type: currentMode, image: imageBase64 })
                 });
 
                 if (res.ok) {
-                    setLogs(prev => [{ name, time: new Date().toLocaleTimeString(), type: mode }, ...prev].slice(0, 10));
-                    // Optional: Show success feedback on UI
+                    setLogs(prev => [{ name, time: new Date().toLocaleTimeString(), type: currentMode }, ...prev].slice(0, 10));
                 } else if (res.status === 409) {
-                    // Already signed in
                     setLogs(prev => [{ name, time: 'Already logged', type: 'error' }, ...prev].slice(0, 10));
+                } else if (res.status === 403) {
+                    setLogs(prev => [{ name, time: 'Session inactive', type: 'error' }, ...prev].slice(0, 10));
                 }
             } catch (err) {
                 console.error("Log error", err);
@@ -127,7 +135,7 @@ function Attendance() {
     const handleVideoPlay = () => {
         setInitializing(false);
         setInterval(async () => {
-            if (videoRef.current && canvasRef.current && matcherRef.current) {
+            if (videoRef.current && canvasRef.current && matcherRef.current && session) {
                 const displaySize = { width: videoRef.current.width, height: videoRef.current.height };
                 faceapi.matchDimensions(canvasRef.current, displaySize);
 
@@ -149,6 +157,15 @@ function Attendance() {
                         logAttendance(result.label, box);
                     }
                 });
+            } else if (!session && videoRef.current) {
+                // If no session, clear canvas and maybe show "Waiting" text on it?
+                if (canvasRef.current) {
+                    const ctx = canvasRef.current.getContext('2d');
+                    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                    ctx.font = "30px Arial";
+                    ctx.fillStyle = "red";
+                    ctx.fillText("No Active Session", 50, 50);
+                }
             }
         }, 100);
     };
@@ -159,37 +176,19 @@ function Attendance() {
                 <h2>Attendance Scanner</h2>
                 <div style={{ textAlign: 'right' }}>
                     {session ? (
-                        <div style={{ color: '#4ade80', fontWeight: 'bold' }}>Active Session: {session.name}</div>
+                        <div style={{ color: '#4ade80', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                            Active: {session.name} ({session.type === 'in' ? 'SIGN IN' : 'SIGN OUT'})
+                        </div>
                     ) : (
-                        <div style={{ color: '#aaa' }}>No Active Session</div>
+                        <div style={{ color: '#f87171', fontWeight: 'bold' }}>OFFLINE: Waiting for Lecturer...</div>
                     )}
-                    <div style={{ marginTop: '0.5rem' }}>
-                        <label style={{ marginRight: '1rem', cursor: 'pointer' }}>
-                            <input
-                                type="radio"
-                                name="mode"
-                                value="in"
-                                checked={mode === 'in'}
-                                onChange={() => setMode('in')}
-                            /> Sign In
-                        </label>
-                        <label style={{ cursor: 'pointer' }}>
-                            <input
-                                type="radio"
-                                name="mode"
-                                value="out"
-                                checked={mode === 'out'}
-                                onChange={() => setMode('out')}
-                            /> Sign Out
-                        </label>
-                    </div>
                 </div>
             </div>
 
             {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
 
             <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <div className="video-container" style={{ width: '640px', height: '480px', background: '#000', position: 'relative' }}>
+                <div className="video-container" style={{ width: '640px', height: '480px', background: '#000', position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
                     {initializing && <div style={{ color: 'white', textAlign: 'center', paddingTop: '200px' }}>Loading System...</div>}
                     <video ref={videoRef} autoPlay muted onPlay={handleVideoPlay} width="640" height="480" />
                     <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
