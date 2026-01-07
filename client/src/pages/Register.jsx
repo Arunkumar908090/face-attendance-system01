@@ -25,7 +25,7 @@ function Register() {
         const loadModels = async () => {
             const MODEL_URL = '/models';
             try {
-                // We load TinyFaceDetector for speed, but Landmark and Recognition for precision
+                //load TinyFaceDetector for speed, but Landmark and Recognition for precision
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
