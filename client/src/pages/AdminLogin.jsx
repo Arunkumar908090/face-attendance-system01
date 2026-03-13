@@ -38,16 +38,16 @@ function AdminLogin() {
                     <ShieldAlert size={40} />
                 </div>
 
-                <h2 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-main)', fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>Restricted Access</h2>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '2.5rem', fontSize: '1rem', lineHeight: '1.6' }}>
+                <h2 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-main)', fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>Lecturer Login</h2>
+                {/* <p style={{ color: 'var(--text-secondary)', marginBottom: '2.5rem', fontSize: '1rem', lineHeight: '1.6' }}>
                     Authenticated administrative session required to access the internal management console.
-                </p>
+                </p> */}
 
                 <form onSubmit={handleLogin}>
                     <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.6rem' }}>
                             <User size={14} className="text-secondary" />
-                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Administrator ID</label>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Lecturer ID</label>
                         </div>
                         <input
                             type="text"
@@ -67,7 +67,7 @@ function AdminLogin() {
                         </div>
                         <input
                             type="password"
-                            placeholder="Enter administrative token"
+                            placeholder="Enter password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             style={{ background: 'var(--bg-main)', border: error ? '1px solid var(--danger)' : '1px solid var(--border-light)' }}

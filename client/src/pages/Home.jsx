@@ -5,7 +5,6 @@ import { ScanFace, UserPlus, Camera, Settings, ShieldCheck, HelpCircle, CheckCir
 function Home() {
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            {/* Background Blob Effects for Glassmorphism pop */}
             <div style={{ position: 'fixed', top: '10%', left: '-5%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, var(--primary-glow), transparent 70%)', filter: 'blur(100px)', zIndex: -1, opacity: 0.5 }} />
             <div style={{ position: 'fixed', bottom: '0%', right: '-10%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(14, 165, 233, 0.3), transparent 70%)', filter: 'blur(100px)', zIndex: -1, opacity: 0.5 }} />
 

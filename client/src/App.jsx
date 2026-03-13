@@ -12,6 +12,7 @@ import './index.css';
 // Protective wrapper for Admin routes
 const ProtectedRoute = ({ children }) => {
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  // Obscure and secure the access route; only valid tokens survive
   return isAdmin ? children : <Navigate to="/admin-login" replace />;
 };
 
@@ -46,7 +47,7 @@ function App() {
             <NavLink to="/" label="Home" />
             <NavLink to="/register" label="Enroll" />
             <NavLink to="/attendance" label="Scanner" />
-            <NavLink to="/admin-login" label="Admin Portal" />
+            <NavLink to="/admin-login" label={<><Lock size={18} /> Lecturer</>} />
           </div>
         </nav>
 

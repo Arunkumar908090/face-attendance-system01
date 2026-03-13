@@ -19,9 +19,16 @@ function AttendanceLogs({ logs, onDeleteLog }) {
                         <tr key={index} className="animate-up" style={{ animationDelay: `${index * 0.05}s` }}>
                             <td style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>{index + 1}</td>
                             <td>
-                                <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1rem' }}>{log.name}</div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{log.matric_no || 'Credential Missing'}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{log.department}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    {log.photo && (
+                                        <img src={`http://localhost:3001${log.photo}`} alt="Student Profile" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-light)' }} />
+                                    )}
+                                    <div>
+                                        <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1rem' }}>{log.name}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{log.matric_no || 'Credential Missing'}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{log.department}</div>
+                                    </div>
+                                </div>
                             </td>
                             <td>
                                 <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{log.session_name}</div>

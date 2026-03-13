@@ -60,7 +60,18 @@ function SessionManager({
 
     const handleCreate = async () => {
         setIsCreating(true);
-        await onCreateSession('in', selectedClass);
+
+        // Clamp duration between 1 and 60 explicitly, default to 15 if missing/invalid
+        let durationVal = parseInt(newSessionDuration);
+        if (isNaN(durationVal) || durationVal <= 0) {
+            durationVal = 15;
+            setNewSessionDuration('15');
+        } else if (durationVal > 60) {
+            durationVal = 60;
+            setNewSessionDuration('60');
+        }
+
+        await onCreateSession('in', selectedClass, durationVal);
         setIsCreating(false);
     };
 
@@ -102,7 +113,9 @@ function SessionManager({
                             <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.4rem', display: 'block' }}>Duration (Min)</label>
                             <input
                                 type="number"
-                                placeholder="60"
+                                placeholder="15"
+                                min="1"
+                                max="60"
                                 value={newSessionDuration}
                                 onChange={e => setNewSessionDuration(e.target.value)}
                                 style={{ background: 'var(--bg-main)' }}

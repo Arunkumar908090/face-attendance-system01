@@ -3,6 +3,58 @@ import { UserCheck, Camera, Info, AlertCircle, CheckCircle, RefreshCw, Layers } 
 import { api } from '../api';
 import * as faceapi from 'face-api.js';
 
+const courseToDepartmentMap = {
+    // School of Computing and Engineering Sciences
+    "Computer Science": "Computer Science",
+    "Software Engineering": "Software Engineering",
+    "Information Technology": "Information Technology",
+    "Computer Engineering": "Engineering",
+    "Civil Engineering": "Engineering",
+    "Electrical & Electronics Engineering": "Engineering",
+    "Mechanical Engineering": "Engineering",
+
+    // School of Management Sciences
+    "Accounting": "Accounting",
+    "Banking & Finance": "Banking and Finance",
+    "Business Administration": "Business Administration and Marketing",
+    "Marketing": "Business Administration and Marketing",
+    "Information Resources Management": "Information Resources Management",
+
+    // School of Science and Technology
+    "Agriculture": "Agriculture and Industrial Technology",
+    "Biochemistry": "Biochemistry",
+    "Microbiology": "Microbiology",
+    "Biology": "Basic Sciences",
+    "Chemistry": "Basic Sciences",
+    "Mathematics": "Basic Sciences",
+    "Physics/Electronics": "Basic Sciences",
+
+    // School of Education and Humanities
+    "Education": "Education",
+    "History and International Studies": "History and International Studies",
+    "Languages and Literary Studies": "Languages and Literary Studies",
+    "Music and Creative Arts": "Music and Creative Arts",
+    "Religious Studies": "Religious Studies",
+
+    // School of Law and Security Studies
+    "Law": "Jurisprudence & Private Law",
+
+    // College of Health and Medical Sciences
+    "Medicine and Surgery": "Medicine & Surgery",
+    "Nursing Science": "Nursing",
+    "Public Health": "Public Health",
+    "Medical Laboratory Science": "Medical Laboratory Science",
+    "Anatomy": "Anatomy",
+    "Physiology": "Physiology",
+    "Nutrition and Dietetics": "Nutrition and Dietetics",
+
+    // School of Social Sciences
+    "Economics": "Economics",
+    "Mass Communication": "Mass Communication",
+    "Political Science & Public Administration": "Political Science and Public Administration",
+    "Social Work": "Social Work"
+};
+
 function Register() {
     const [formData, setFormData] = useState({
         name: '',
@@ -71,6 +123,9 @@ function Register() {
         loadResources();
         return () => {
             if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
+            if (videoRef.current && videoRef.current.srcObject) {
+                videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+            }
         };
     }, []);
 
@@ -232,11 +287,33 @@ function Register() {
             data.append('faceLandmarks', JSON.stringify(faceLandmarksPayload));
         }
 
-        captures.forEach(blob => {
-            data.append('images', blob, 'capture.jpg');
-        });
+        // Process blobs into form data and base64 for the primary photo
+        const processCaptures = () => {
+            return new Promise((resolve) => {
+                let photoData = null;
+                captures.forEach((blob, i) => {
+                    data.append('images', blob, `capture_${i}.jpg`);
+                    if (i === 0) {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onloadend = () => {
+                            photoData = reader.result;
+                        };
+                    }
+                });
+
+                // Slight delay to ensure FileReader finishes
+                setTimeout(() => {
+                    if (photoData) {
+                        data.append('photo', photoData);
+                    }
+                    resolve();
+                }, 300);
+            });
+        };
 
         try {
+            await processCaptures();
             const res = await api.users.register(data);
             if (res.success) {
                 setStatus('SUCCESS');
@@ -256,7 +333,21 @@ function Register() {
         }
     };
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        if (name === 'name') {
+            if (!/^[a-zA-Z\s]*$/.test(value)) return;
+        }
+        if (name === 'matric_no') {
+            if (!/^[a-zA-Z0-9/\-]*$/.test(value)) return;
+        }
+        if (name === 'course') {
+            const mappedDepartment = courseToDepartmentMap[value] || '';
+            setFormData({ ...formData, course: value, department: mappedDepartment });
+            return;
+        }
+        setFormData({ ...formData, [name]: value });
+    };
     const toggleClass = (id) => setSelectedClasses(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
     return (
@@ -279,11 +370,24 @@ function Register() {
                     <div style={{ display: 'grid', gap: '1rem' }}>
                         <input name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} disabled={status !== 'IDLE'} />
                         <input name="matric_no" placeholder="Matric No" value={formData.matric_no} onChange={handleChange} disabled={status !== 'IDLE'} />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <input name="level" placeholder="Level" value={formData.level} onChange={handleChange} disabled={status !== 'IDLE'} />
-                            <input name="department" placeholder="Department" value={formData.department} onChange={handleChange} disabled={status !== 'IDLE'} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '1rem' }}>
+                            <select name="level" value={formData.level} onChange={handleChange} disabled={status !== 'IDLE'} style={{ background: 'var(--bg-main)', padding: '1rem 0.5rem' }}>
+                                <option value="">Level</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                                <option value="300">300</option>
+                                <option value="400">400</option>
+                                <option value="500">500</option>
+                                <option value="600">600</option>
+                            </select>
+                            <input name="department" placeholder="Department (Auto-filled)" value={formData.department} disabled={true} style={{ background: '#f1f5f9', color: '#64748b' }} />
                         </div>
-                        <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} disabled={status !== 'IDLE'} />
+                        <select name="course" value={formData.course} onChange={handleChange} disabled={status !== 'IDLE'} style={{ background: 'var(--bg-main)' }}>
+                            <option value="">Select a Course</option>
+                            {Object.keys(courseToDepartmentMap).map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
+                        </select>
 
                         <div>
                             <label style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '8px', display: 'block' }}>Classes</label>

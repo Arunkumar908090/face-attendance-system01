@@ -16,6 +16,9 @@ function Attendance() {
     const canvasRef = useRef(); // Bounding Box Overlay
     const detectionFrameRef = useRef(null);
     const cooldownRef = useRef(false);
+    const localCooldownCache = useRef({}); // { matricNo: timestamp } for 5 min cache
+    const [livenessStage, setLivenessStage] = useState('INIT'); // INIT, CHALLENGE, VERIFYING
+    const [livenessChallenge, setLivenessChallenge] = useState(null); // 'SMILE', 'TURN_LEFT', 'TURN_RIGHT', 'LOOK_UP'
     const [guidance, setGuidance] = useState(null);
 
     // Bounding Box state removed, using Canvas Ref instead
@@ -24,7 +27,9 @@ function Attendance() {
     const stateRef = useRef({
         status: 'IDLE',
         session: null,
-        guidance: null
+        guidance: null,
+        livenessStage: 'INIT',
+        livenessChallenge: null
     });
 
     // Sync Refs
@@ -32,7 +37,9 @@ function Attendance() {
         stateRef.current.status = status;
         stateRef.current.session = session;
         stateRef.current.guidance = guidance;
-    }, [status, session, guidance]);
+        stateRef.current.livenessStage = livenessStage;
+        stateRef.current.livenessChallenge = livenessChallenge;
+    }, [status, session, guidance, livenessStage, livenessChallenge]);
 
     // Initial Setup
     useEffect(() => {
@@ -60,6 +67,9 @@ function Attendance() {
         setup();
         return () => {
             if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
+            if (videoRef.current && videoRef.current.srcObject) {
+                videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+            }
         };
     }, []);
 
@@ -154,32 +164,52 @@ function Attendance() {
                     ctx.font = '16px sans-serif';
                     ctx.fillText(`${Math.round(score * 100)}%`, box.x, box.y > 20 ? box.y - 5 : 20);
 
-                    // Auto-Verify Logic
+                    // Auto-Verify Logic & Liveness Detection
                     const currentStatus = stateRef.current.status;
                     const currentSession = stateRef.current.session;
+                    const stage = stateRef.current.livenessStage;
 
                     if (currentStatus === 'SCANNING' && !cooldownRef.current && currentSession) {
-                        const isBigEnough = box.width > 110;
+                        const isBigEnough = box.width > 120; // Ensure face is close enough
                         let newGuidance = null;
 
                         if (!isConfident) {
-                            newGuidance = "Hold Still";
+                            newGuidance = "Hold Still & Look at Camera";
+                            if (stage !== 'INIT') setLivenessStage('INIT');
                         } else if (!isBigEnough) {
-                            newGuidance = "Move Closer";
+                            newGuidance = "Move Closer to Camera";
+                            if (stage !== 'INIT') setLivenessStage('INIT');
+                        } else {
+                            // Face is valid, handle liveness
+                            if (stage === 'INIT') {
+                                // Select a random challenge
+                                const challenges = ['SMILE', 'TURN_LEFT', 'TURN_RIGHT'];
+                                const selected = challenges[Math.floor(Math.random() * challenges.length)];
+                                setLivenessChallenge(selected);
+                                setLivenessStage('CHALLENGE');
+                                newGuidance = getChallengeText(selected);
+                            } else if (stage === 'CHALLENGE') {
+                                // Check if user is passing the challenge
+                                const challenge = stateRef.current.livenessChallenge;
+                                newGuidance = getChallengeText(challenge);
+
+                                if (verifyLiveness(detection.landmarks, challenge)) {
+                                    setLivenessStage('VERIFYING');
+                                    newGuidance = "Hold still for verification...";
+                                    triggerVerification(detection.descriptor);
+                                }
+                            }
                         }
 
                         if (newGuidance !== stateRef.current.guidance) {
                             setGuidance(newGuidance);
                         }
-
-                        if (isConfident && isBigEnough) {
-                            triggerVerification(detection.descriptor);
-                        }
                     }
                 } else {
                     const currentStatus = stateRef.current.status;
                     if (currentStatus === 'SCANNING') {
-                        if (stateRef.current.guidance !== "Look at Camera") setGuidance("Look at Camera");
+                        if (stateRef.current.guidance !== "Looking for face...") setGuidance("Looking for face...");
+                        if (stateRef.current.livenessStage !== 'INIT') setLivenessStage('INIT');
                     } else {
                         if (stateRef.current.guidance !== null) setGuidance(null);
                     }
@@ -188,6 +218,58 @@ function Attendance() {
         }
 
         detectionFrameRef.current = requestAnimationFrame(detectLoop);
+    };
+
+    const getChallengeText = (challenge) => {
+        switch (challenge) {
+            case 'SMILE': return "Action Required: Smile wide for the camera";
+            case 'TURN_LEFT': return "Action Required: Turn your head slightly Left";
+            case 'TURN_RIGHT': return "Action Required: Turn your head slightly Right";
+            default: return "Hold Still";
+        }
+    };
+
+    const verifyLiveness = (landmarks, challenge) => {
+        const positions = landmarks.positions;
+        if (!positions || positions.length < 68) return false;
+
+        // Basic landmark heuristics
+        // Nose tip: 30
+        // Left jaw: 0-8, Right jaw: 8-16
+        // Mouth outer: 48-59
+
+        if (challenge === 'TURN_LEFT') {
+            const noseX = positions[30].x;
+            const leftJawX = positions[0].x;
+            const rightJawX = positions[16].x;
+            // Face turned left means nose is closer to the left jaw (from camera perspective)
+            const leftDist = Math.abs(noseX - leftJawX);
+            const rightDist = Math.abs(noseX - rightJawX);
+            return (leftDist / rightDist) < 0.6;
+        }
+
+        if (challenge === 'TURN_RIGHT') {
+            const noseX = positions[30].x;
+            const leftJawX = positions[0].x;
+            const rightJawX = positions[16].x;
+            const leftDist = Math.abs(noseX - leftJawX);
+            const rightDist = Math.abs(noseX - rightJawX);
+            return (rightDist / leftDist) < 0.6;
+        }
+
+        if (challenge === 'SMILE') {
+            const mouthLeft = positions[48];
+            const mouthRight = positions[54];
+            const mouthTop = positions[51];
+            const mouthBottom = positions[57];
+
+            const mouthWidth = Math.abs(mouthRight.x - mouthLeft.x);
+            const mouthHeight = Math.abs(mouthBottom.y - mouthTop.y);
+            // Smiling usually widens the mouth and reduces height relative to width
+            return (mouthWidth / mouthHeight) > 2.5;
+        }
+
+        return false;
     };
 
     const triggerVerification = async (descriptorVal) => {
@@ -222,11 +304,19 @@ function Attendance() {
                 const res = await api.attendance.log(formData);
                 if (res.success) {
                     const name = res.user ? res.user.name : "Verified";
-                    if (res.duplicate) {
-                        setFeedback({ type: 'success', name, text: "Already Marked" });
+                    const matricNo = res.user ? res.user.matric_no : "VERIFIED";
+
+                    // Duplicate Cooldown Prevention
+                    const now = Date.now();
+                    const cacheTime = localCooldownCache.current[matricNo];
+
+                    if (cacheTime && (now - cacheTime < 5 * 60 * 1000) || res.duplicate) {
+                        setFeedback({ type: 'success', name, text: "Already Marked Present" });
+                        localCooldownCache.current[matricNo] = now; // reset timer
                     } else {
                         setFeedback({ type: 'success', name, text: "Attendance Marked" });
                         setLogs(prev => [{ name, time: new Date().toLocaleTimeString(), type: 'in' }, ...prev].slice(0, 10));
+                        localCooldownCache.current[matricNo] = now;
                     }
                 } else {
                     setFeedback({ type: 'error', name: 'Unknown', text: res.error || "Face not recognized" });
@@ -236,6 +326,7 @@ function Attendance() {
             } finally {
                 setTimeout(() => {
                     setFeedback(null);
+                    setLivenessStage('INIT');
                     setStatus('SCANNING');
                     cooldownRef.current = false;
                 }, 2000);

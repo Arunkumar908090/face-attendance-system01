@@ -32,7 +32,7 @@ function Admin() {
 
     // Form inputs
     const [newSessionName, setNewSessionName] = useState('');
-    const [newSessionDuration, setNewSessionDuration] = useState('60');
+    const [newSessionDuration, setNewSessionDuration] = useState('15');
     const [bulkDate, setBulkDate] = useState('');
 
     // Debounce state for live search
@@ -55,6 +55,33 @@ function Admin() {
 
         if (activeTab === 'classes') setSearchQuery('');
     }, [activeTab]);
+
+    // 10-Minute Timeout Logic
+    useEffect(() => {
+        let timeoutId;
+
+        const resetTimeout = () => {
+            clearTimeout(timeoutId);
+            // 10 minutes = 10 * 60 * 1000 = 600,000 ms
+            timeoutId = setTimeout(() => {
+                localStorage.removeItem('isAdmin');
+                alert("Session expired due to inactivity.");
+                navigate('/admin-login');
+            }, 600000); // 10 minutes
+        };
+
+        // Track user interaction
+        const events = ['mousemove', 'keydown', 'click', 'scroll'];
+        events.forEach(event => window.addEventListener(event, resetTimeout));
+
+        // Initialize the timeout
+        resetTimeout();
+
+        return () => {
+            clearTimeout(timeoutId);
+            events.forEach(event => window.removeEventListener(event, resetTimeout));
+        };
+    }, [navigate]);
 
     useEffect(() => {
         fetchActiveSession();
@@ -114,13 +141,14 @@ function Admin() {
         }
     };
 
-    const handleCreateSession = async (type, classId) => {
+    const handleCreateSession = async (type, classId, providedDuration) => {
         if (!newSessionName) {
             alert("Please specify a session name for tracking.");
             return { error: 'Name required' };
         }
         try {
-            const res = await api.sessions.create(newSessionName, type, parseInt(newSessionDuration) || 0, classId);
+            const finalDuration = providedDuration || parseInt(newSessionDuration) || 15;
+            const res = await api.sessions.create(newSessionName, type, finalDuration, classId);
             if (res.error) {
                 alert(res.error);
                 return res;
