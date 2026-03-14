@@ -160,7 +160,7 @@ router.get('/export-matrix', auth, (req, res) => {
 
         if (!sessionName) return res.status(400).json({ error: 'sessionName or classId is required' });
 
-        const users = userService.getAllUsers();
+        const users = db.prepare('SELECT id, matric_no, name, department, course FROM users WHERE is_active = 1 ORDER BY name ASC').all();
         const sessions = db.prepare('SELECT id, date(start_time) as date FROM sessions WHERE name = ? ORDER BY start_time ASC').all(sessionName);
 
         if (sessions.length === 0) return res.status(404).json({ error: 'No sessions found with this name' });
