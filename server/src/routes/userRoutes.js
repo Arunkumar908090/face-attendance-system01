@@ -8,6 +8,10 @@ const faceService = require('../services/faceService');
 const fs = require('fs');
 const path = require('path');
 const auth = require('../middleware/auth');
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary using Environment Variable 
+// (Ensure CLOUDINARY_URL is set in .env)
 
 // Configure Multer (Memory Storage)
 const upload = multer({
@@ -55,62 +59,51 @@ router.post('/register', upload.any(), parseFormData, validate(registerSchema), 
     }
 
     // fallback if no image/descriptor
-    if (!descriptor && !photo) {
-        return res.status(400).json({ success: false, error: 'Biometric data required' });
+    if (!descriptor || !photo) {
+        return res.status(400).json({ success: false, error: 'Both a Photo and a valid Biometric Descriptor are strictly required' });
     }
 
-    // Handle incoming base64 photo for filesystem saving
+    // Handle incoming base64 photo for Cloudinary Upload
     if (photo && photo.startsWith('data:image')) {
         try {
-            // Remove header (e.g., data:image/jpeg;base64,)
-            const base64Data = photo.replace(/^data:image\/\w+;base64,/, "");
-            const uploadDir = path.join(__dirname, '../../uploads');
-
-            // Create uploads directory if it doesn't exist just in case
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-            }
-
-            const safeMatric = matric_no ? matric_no.replace(/\//g, '-') : 'unknown';
-            const fileName = `user_${safeMatric}_${Date.now()}.jpg`;
-            const filePath = path.join(uploadDir, fileName);
-
-            // Write the file
-            fs.writeFileSync(filePath, base64Data, { encoding: 'base64' });
-
-            // Set the database reference to the relative static URL
-            photo = `/uploads/${fileName}`;
+            const uploadResponse = await cloudinary.uploader.upload(photo, {
+                folder: "face-attendance/users",
+                resource_type: "image",
+            });
+            photo = uploadResponse.secure_url;
         } catch (err) {
-            console.error("WRITE DISK ERROR DETAILS:", err);
-            return res.status(500).json({ success: false, error: `Failed to save student image: ${err.message}` });
+            console.error("CLOUDINARY UPLOAD ERROR DETAILS:", err);
+            return res.status(500).json({ success: false, error: `Failed to upload student image to cloud: ${err.message}` });
         }
     }
 
     try {
-        const result = userService.registerUser({
+        const result = await userService.registerUser({
             name, matric_no, level, department, course,
             descriptor,
             section,
-            classIds: classIds ? (Array.isArray(classIds) ? classIds : JSON.parse(classIds)) : []
+            classIds: classIds ? (Array.isArray(classIds) ? classIds : JSON.parse(classIds)) : [],
+            photo
         });
         res.json({ success: true, userId: result.userId, created: result.created });
     } catch (err) {
         console.error("Registration error:", err);
-        if (err.message.includes('UNIQUE constraint failed')) {
-            return res.status(409).json({ error: 'User already exists' });
+        // Postgres unique constraint error handling
+        if (err.message.includes('unique constraint') || err.message.includes('duplicate key')) {
+             return res.status(400).json({ success: false, error: 'Student with this Matric Number already exists' });
         }
         res.status(500).json({ error: err.message });
     }
 });
 
 // Get all users (Paginated)
-router.get('/', auth, (req, res) => {
+router.get('/', auth, async (req, res) => {
     try {
         const { search, sort, page, limit } = req.query;
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 10;
 
-        const result = userService.getAllUsers(search, sort, pageNum, limitNum);
+        const result = await userService.getAllUsers(search, sort, pageNum, limitNum);
 
         const usersWithDescriptors = result.data.map(u => ({
             ...u,
@@ -130,9 +123,9 @@ router.get('/', auth, (req, res) => {
 });
 
 // Delete user
-router.delete('/:id', auth, (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
     try {
-        userService.deleteUser(req.params.id);
+        await userService.deleteUser(req.params.id);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

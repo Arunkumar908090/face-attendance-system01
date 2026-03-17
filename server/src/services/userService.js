@@ -1,10 +1,11 @@
-const db = require('../config/database');
+const pool = require('../config/database');
 
-const registerUser = (user) => {
+const registerUser = async (user) => {
     const { name, matric_no, level, department, course, photo, descriptor, section, classIds } = user;
 
     // Check if user already exists by matric_no
-    const existingUser = db.prepare('SELECT id, descriptor FROM users WHERE matric_no = ?').get(matric_no);
+    const { rows: existingUsers } = await pool.query('SELECT id, descriptor FROM users WHERE matric_no = $1', [matric_no]);
+    const existingUser = existingUsers[0];
 
     let userId;
     if (existingUser) {
@@ -29,8 +30,10 @@ const registerUser = (user) => {
         // Keep only last 5 descriptors to prevent bloat but maintain accuracy
         if (descriptors.length > 5) descriptors.shift();
 
-        const stmt = db.prepare('UPDATE users SET name = ?, level = ?, department = ?, course = ?, photo = ?, descriptor = ?, section = ?, is_active = 1 WHERE id = ?');
-        stmt.run(name, level, department, course, photo, JSON.stringify(descriptors), section, existingUser.id);
+        await pool.query(
+            'UPDATE users SET name = $1, level = $2, department = $3, course = $4, photo = $5, descriptor = $6, section = $7, is_active = 1 WHERE id = $8',
+            [name, level, department, course, photo, JSON.stringify(descriptors), section, existingUser.id]
+        );
         userId = existingUser.id;
     } else {
         // New user: store as array of arrays. 
@@ -38,29 +41,30 @@ const registerUser = (user) => {
         // If it's a single descriptor array, wrap it.
         const initialDescriptors = (Array.isArray(descriptor) && Array.isArray(descriptor[0])) ? descriptor : [descriptor];
 
-        const stmt = db.prepare('INSERT INTO users (name, matric_no, level, department, course, photo, descriptor, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        const info = stmt.run(name, matric_no, level, department, course, photo, JSON.stringify(initialDescriptors), section);
-        userId = info.lastInsertRowid;
+        const { rows } = await pool.query(
+            'INSERT INTO users (name, matric_no, level, department, course, photo, descriptor, section) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+            [name, matric_no, level, department, course, photo, JSON.stringify(initialDescriptors), section]
+        );
+        userId = rows[0].id;
     }
 
     // Handle Class Enrollment
     if (classIds && Array.isArray(classIds)) {
-        const insertClass = db.prepare('INSERT OR IGNORE INTO enrollments (user_id, class_id) VALUES (?, ?)');
-        classIds.forEach(cId => {
+        for (const cId of classIds) {
             try {
-                insertClass.run(userId, cId);
+                await pool.query('INSERT INTO enrollments (user_id, class_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, cId]);
             } catch (e) { /* ignore */ }
-        });
+        }
     }
 
     return { userId, created: !existingUser };
 };
 
-const getAllUsers = (search, sort, page = 1, limit = 10) => {
+const getAllUsers = async (search, sort, page = 1, limit = 10) => {
     let query = `
         SELECT u.id, u.name, u.matric_no, u.level, u.department, u.course, u.photo, u.descriptor, u.section, u.is_active,
-        strftime('%Y-%m-%dT%H:%M:%SZ', u.created_at) as created_at,
-        GROUP_CONCAT(c.code, ', ') as enrolled_classes
+        to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as created_at,
+        STRING_AGG(c.code, ', ') as enrolled_classes
         FROM users u
         LEFT JOIN enrollments e ON u.id = e.user_id
         LEFT JOIN classes c ON e.class_id = c.id
@@ -68,12 +72,14 @@ const getAllUsers = (search, sort, page = 1, limit = 10) => {
     `;
     let countQuery = `SELECT COUNT(DISTINCT u.id) as total FROM users u WHERE u.is_active = 1`;
     const params = [];
+    let paramIndex = 1;
 
     if (search) {
-        const searchClause = ' AND (u.name LIKE ? OR u.matric_no LIKE ?)';
+        const searchClause = ` AND (u.name ILIKE $${paramIndex} OR u.matric_no ILIKE $${paramIndex + 1})`;
         query += searchClause;
         countQuery += searchClause;
         params.push(`%${search}%`, `%${search}%`);
+        paramIndex += 2;
     }
 
     query += ' GROUP BY u.id';
@@ -88,27 +94,22 @@ const getAllUsers = (search, sort, page = 1, limit = 10) => {
 
     // Pagination
     const offset = (page - 1) * limit;
-    query += ` LIMIT ? OFFSET ?`;
-
+    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    
     const dataParams = [...params, limit, offset];
 
-    const stmt = db.prepare(query);
-    const data = stmt.all(...dataParams);
-
-    const countStmt = db.prepare(countQuery);
-    const totalResult = countStmt.get(...params);
+    const { rows: data } = await pool.query(query, dataParams);
+    const { rows: countResult } = await pool.query(countQuery, params);
 
     return {
         data,
-        total: totalResult ? totalResult.total : 0
+        total: countResult.length > 0 ? parseInt(countResult[0].total, 10) : 0
     };
 };
 
-
-const deleteUser = (id) => {
+const deleteUser = async (id) => {
     // Perform Soft Delete
-    const stmt = db.prepare('UPDATE users SET is_active = 0 WHERE id = ?');
-    return stmt.run(id);
+    await pool.query('UPDATE users SET is_active = 0 WHERE id = $1', [id]);
 };
 
 module.exports = {
@@ -116,4 +117,3 @@ module.exports = {
     getAllUsers,
     deleteUser
 };
-

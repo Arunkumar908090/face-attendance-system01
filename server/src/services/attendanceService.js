@@ -1,24 +1,29 @@
-const db = require('../config/database');
+const pool = require('../config/database');
 const faceService = require('./faceService');
 
 const THRESHOLD = 0.9; // Strictness for ArcFace
 
-const logAttendance = (userId, sessionId, type, image) => {
-    const stmt = db.prepare('INSERT INTO attendance (user_id, session_id, type, image) VALUES (?, ?, ?, ?)');
-    const info = stmt.run(userId, sessionId, type, image);
-    return info.lastInsertRowid;
+const logAttendance = async (userId, sessionId, type, image) => {
+    const { rows } = await pool.query(
+        'INSERT INTO attendance (user_id, session_id, type, image) VALUES ($1, $2, $3, $4) RETURNING id',
+        [userId, sessionId, type, image]
+    );
+    return rows[0].id;
 };
 
-const checkDuplicate = (userId, sessionId, type) => {
+const checkDuplicate = async (userId, sessionId, type) => {
     if (!sessionId) return false;
-    const stmt = db.prepare('SELECT id FROM attendance WHERE user_id = ? AND session_id = ? AND type = ?');
-    return !!stmt.get(userId, sessionId, type);
+    const { rows } = await pool.query(
+        'SELECT id FROM attendance WHERE user_id = $1 AND session_id = $2 AND type = $3',
+        [userId, sessionId, type]
+    );
+    return rows.length > 0;
 };
 
 const verifyFace = async (descriptor) => {
     // The match logic is now entirely handled by faceService.findMatchingFace
     // which compares the incoming 128D array against all stored descriptors.
-    const match = faceService.findMatchingFace(descriptor);
+    const match = await faceService.findMatchingFace(descriptor);
 
     if (match) {
         return match.userId;
@@ -27,9 +32,9 @@ const verifyFace = async (descriptor) => {
     return null;
 };
 
-const getAttendanceLogs = (search, sessionIdParam = null) => {
+const getAttendanceLogs = async (search, sessionIdParam = null) => {
     let query = `
-    SELECT a.id, strftime('%Y-%m-%dT%H:%M:%SZ', a.timestamp) as timestamp, a.type, a.image, u.name, u.matric_no, u.level, u.department, s.name as session_name
+    SELECT a.id, to_char(a.timestamp, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as timestamp, a.type, a.image, u.name, u.matric_no, u.level, u.department, s.name as session_name
     FROM attendance a 
     JOIN users u ON a.user_id = u.id 
     LEFT JOIN sessions s ON a.session_id = s.id
@@ -37,15 +42,18 @@ const getAttendanceLogs = (search, sessionIdParam = null) => {
 
     const params = [];
     const conditions = [];
+    let paramIndex = 1;
 
     if (search) {
-        conditions.push('(u.name LIKE ? OR u.matric_no LIKE ? OR date(a.timestamp) = ?)');
+        conditions.push(`(u.name ILIKE $${paramIndex} OR u.matric_no ILIKE $${paramIndex + 1} OR date(a.timestamp)::text = $${paramIndex + 2})`);
         params.push(`%${search}%`, `%${search}%`, search);
+        paramIndex += 3;
     }
 
     if (sessionIdParam) {
-        conditions.push('a.session_id = ?');
+        conditions.push(`a.session_id = $${paramIndex}`);
         params.push(sessionIdParam);
+        paramIndex += 1;
     }
 
     if (conditions.length > 0) {
@@ -53,31 +61,29 @@ const getAttendanceLogs = (search, sessionIdParam = null) => {
     }
 
     query += ' ORDER BY a.timestamp DESC';
-    const stmt = db.prepare(query);
-    return stmt.all(...params);
+    const { rows } = await pool.query(query, params);
+    return rows;
 };
 
-const deleteAttendance = (id) => {
-    const stmt = db.prepare('DELETE FROM attendance WHERE id = ?');
-    return stmt.run(id);
+const deleteAttendance = async (id) => {
+    await pool.query('DELETE FROM attendance WHERE id = $1', [id]);
 };
 
-const deleteAttendanceByDate = (date) => {
-    const stmt = db.prepare('DELETE FROM attendance WHERE date(timestamp) = ?');
-    return stmt.run(date);
+const deleteAttendanceByDate = async (date) => {
+    await pool.query('DELETE FROM attendance WHERE date(timestamp)::text = $1', [date]);
 };
 
-const getAttendanceMatrix = (classId) => {
+const getAttendanceMatrix = async (classId) => {
     // 1. Get all sessions for this class
-    let sessionQuery = 'SELECT id, name, date(start_time) as date FROM sessions WHERE 1=1';
+    let sessionQuery = 'SELECT id, name, to_char(start_time, \'YYYY-MM-DD\') as date FROM sessions WHERE 1=1';
     const params = [];
-
+    
     if (classId) {
-        sessionQuery += ' AND class_id = ?';
+        sessionQuery += ' AND class_id = $1';
         params.push(classId);
     }
     sessionQuery += ' ORDER BY start_time ASC';
-    const sessions = db.prepare(sessionQuery).all(...params);
+    const { rows: sessions } = await pool.query(sessionQuery, params);
 
     if (sessions.length === 0) return { sessions: [], data: [] };
 
@@ -85,21 +91,24 @@ const getAttendanceMatrix = (classId) => {
     let userQuery = `
         SELECT u.id, u.name, u.matric_no
         FROM users u
-        ${classId ? 'JOIN enrollments e ON u.id = e.user_id WHERE e.class_id = ?' : ''}
+        ${classId ? 'JOIN enrollments e ON u.id = e.user_id WHERE e.class_id = $1' : ''}
         ORDER BY u.name ASC
     `;
-    const users = db.prepare(userQuery).all(...(classId ? [classId] : []));
+    const userParams = classId ? [classId] : [];
+    const { rows: users } = await pool.query(userQuery, userParams);
 
     // 3. Get all attendance records for these sessions
     const sessionIds = sessions.map(s => s.id);
     if (sessionIds.length === 0) return { sessions, data: [] };
 
+    // Build parameterized query for IN array
+    const inParams = sessionIds.map((_, i) => `$${i + 1}`).join(',');
     const attendanceQuery = `
         SELECT user_id, session_id 
         FROM attendance 
-        WHERE session_id IN (${sessionIds.join(',')}) AND type = 'in'
+        WHERE session_id IN (${inParams}) AND type = 'in'
     `;
-    const attendanceRecords = db.prepare(attendanceQuery).all();
+    const { rows: attendanceRecords } = await pool.query(attendanceQuery, sessionIds);
 
     // 4. Build Matrix
     const attendanceMap = {};

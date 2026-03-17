@@ -1,31 +1,32 @@
-const db = require('../config/database');
+const pool = require('../config/database');
 
-const createClass = (name, code, department) => {
-    const stmt = db.prepare('INSERT INTO classes (name, code, department) VALUES (?, ?, ?)');
+const createClass = async (name, code, department) => {
     try {
-        const info = stmt.run(name, code, department);
-        return { id: info.lastInsertRowid, name, code, department };
+        const { rows } = await pool.query(
+            'INSERT INTO classes (name, code, department) VALUES ($1, $2, $3) RETURNING id',
+            [name, code, department]
+        );
+        return { id: rows[0].id, name, code, department };
     } catch (error) {
-        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        if (error.code === '23505') { // Postgres unique_violation code
             throw new Error('Class code already exists.');
         }
         throw error;
     }
 };
 
-const getAllClasses = () => {
-    const stmt = db.prepare('SELECT * FROM classes ORDER BY code ASC');
-    return stmt.all();
+const getAllClasses = async () => {
+    const { rows } = await pool.query('SELECT * FROM classes ORDER BY code ASC');
+    return rows;
 };
 
-const deleteClass = (id) => {
-    const stmt = db.prepare('DELETE FROM classes WHERE id = ?');
-    return stmt.run(id);
+const deleteClass = async (id) => {
+    await pool.query('DELETE FROM classes WHERE id = $1', [id]);
 };
 
-const getClassById = (id) => {
-    const stmt = db.prepare('SELECT * FROM classes WHERE id = ?');
-    return stmt.get(id);
+const getClassById = async (id) => {
+    const { rows } = await pool.query('SELECT * FROM classes WHERE id = $1', [id]);
+    return rows[0];
 };
 
 module.exports = {

@@ -18,36 +18,34 @@ const upload = multer({
 
 // Log attendance (Scan Face)
 router.post('/', upload.any(), validate(markAttendanceSchema), async (req, res) => {
-    // userId is NO LONGER required in body if image is provided
-    let { userId, faceLandmarks } = req.body;
+    let { faceLandmarks } = req.body;
+    let userId = null;
 
     // Find any image file
     const file = req.files ? req.files.find(f => f.mimetype.startsWith('image/')) : null;
 
     try {
-        if (faceLandmarks) {
-            // VERIFY FACE
-            console.log(`Verifying face from provided landmarks...`);
-            let descriptor = faceLandmarks;
-            if (typeof descriptor === 'string') {
-                try {
-                    descriptor = JSON.parse(descriptor);
-                } catch (e) {
-                    return res.status(400).json({ error: 'Invalid faceLandmarks payload' });
-                }
-            }
-
-            const recognizedUserId = await attendanceService.verifyFace(descriptor);
-
-            if (!recognizedUserId) {
-                return res.status(401).json({ error: 'Face not recognized' });
-            }
-            userId = recognizedUserId;
+        if (!faceLandmarks) {
+             return res.status(400).json({ error: 'Facial biometric data is required' });
         }
 
-        if (!userId) {
-            return res.status(400).json({ error: 'UserId or faceLandmarks is required' });
+        // VERIFY FACE
+        console.log(`Verifying face from provided landmarks...`);
+        let descriptor = faceLandmarks;
+        if (typeof descriptor === 'string') {
+            try {
+                descriptor = JSON.parse(descriptor);
+            } catch (e) {
+                return res.status(400).json({ error: 'Invalid faceLandmarks payload' });
+            }
         }
+
+        const recognizedUserId = await attendanceService.verifyFace(descriptor);
+
+        if (!recognizedUserId) {
+            return res.status(401).json({ error: 'Face not recognized' });
+        }
+        userId = recognizedUserId;
 
         const activeSession = sessionService.getActiveSession();
 
