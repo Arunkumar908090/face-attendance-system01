@@ -9,7 +9,7 @@ function Home() {
             <div style={{ position: 'fixed', bottom: '0%', right: '-10%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(14, 165, 233, 0.3), transparent 70%)', filter: 'blur(100px)', zIndex: -1, opacity: 0.5 }} />
 
             {/* Hero Section */}
-            <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }} className="px-4 py-8 md:p-16">
+            <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', textAlign: 'center' }}>
                 <div className="animate-up" style={{ maxWidth: '900px', width: '100%' }}>
 
                     <h1 style={{ fontSize: 'clamp(3rem, 5vw, 5rem)', fontWeight: 900, lineHeight: 1.05, marginBottom: '1.5rem', color: 'var(--text-main)', letterSpacing: '-1.5px' }}>
@@ -23,11 +23,11 @@ function Home() {
                         Secure and automated attendance tracking using advanced facial recognition.
                     </p>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-16 px-4">
-                        <Link to="/attendance" className="btn btn-primary w-full sm:w-auto" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem', borderRadius: '50px', boxShadow: '0 0 25px var(--primary-glow)', textDecoration: 'none' }}>
+                    <div className="flex-center button-gutter" style={{ marginBottom: '5rem' }}>
+                        <Link to="/attendance" className="btn btn-primary" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem', borderRadius: '50px', boxShadow: '0 0 25px var(--primary-glow)', textDecoration: 'none' }}>
                             <Camera size={22} /> ENTER SCANNER
                         </Link>
-                        <Link to="/register" className="btn btn-secondary w-full sm:w-auto" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem', borderRadius: '50px', background: 'var(--bg-glass-strong)', backdropFilter: 'blur(10px)', border: '1px solid var(--border-light)', textDecoration: 'none', boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.05)' }}>
+                        <Link to="/register" className="btn btn-secondary" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem', borderRadius: '50px', background: 'var(--bg-glass-strong)', backdropFilter: 'blur(10px)', border: '1px solid var(--border-light)', textDecoration: 'none', boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.05)' }}>
                             <UserPlus size={22} /> REGISTER FACE
                         </Link>
                     </div>
@@ -61,7 +61,7 @@ function Home() {
                             <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>System Instructions</h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
                             {/* Step 1 */}
                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                                 <div style={{ background: 'var(--primary)', color: 'white', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0, fontSize: '1.2rem', boxShadow: '0 4px 10px var(--primary-glow)' }}>
