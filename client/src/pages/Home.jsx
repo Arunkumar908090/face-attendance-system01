@@ -114,7 +114,7 @@ function Home() {
 
             {/* Footer */}
             <footer className="p-8 pb-12 sm:p-8 text-center text-slate-500 font-medium mt-auto z-10 border-t border-slate-200/50">
-                &copy; Facial Recognition-Based Attendance System
+                &copy; Facial Recognition-Based Attendance System by the SWAG developer
             </footer>
         </div>
     );
