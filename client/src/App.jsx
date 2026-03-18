@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { ScanFace, UserPlus, Camera, Lock, Home as HomeIcon } from 'lucide-react';
 import Register from './pages/Register';
@@ -8,7 +8,6 @@ import AdminLogin from './pages/AdminLogin';
 import Home from './pages/Home';
 import LiquidBackground from './components/LiquidBackground';
 import ErrorBoundary from './components/ErrorBoundary';
-import DesktopOnlyRoute from './components/DesktopOnlyRoute';
 import './index.css';
 
 // Protective wrapper for Admin routes
@@ -19,34 +18,21 @@ const ProtectedRoute = ({ children }) => {
 };
 
 // Nav Link component for active state styling
-const NavLink = ({ to, label, className }) => {
+const NavLink = ({ to, label }) => {
   const location = useLocation();
   const isActive = location.pathname === to || (location.pathname === '/admin' && to === '/admin-login');
 
   return (
     <Link
       to={to}
-      className={`${isActive ? 'active' : ''} ${className || ''}`}
+      className={isActive ? 'active' : ''}
     >
       {label}
     </Link>
   );
 };
 
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-  return isMobile;
-};
-
 function App() {
-  const isMobile = useIsMobile();
-
   return (
     <ErrorBoundary>
       <Router>
@@ -62,9 +48,8 @@ function App() {
             <div className="nav-links">
               <NavLink to="/" label="Home" />
               <NavLink to="/register" label="Enroll" />
-              {/* Only show Scanner and Lecturer on Desktop */}
-              <NavLink to="/attendance" label="Scanner" className="hidden md:flex" />
-              <NavLink to="/admin-login" label={<><Lock size={18} /> Lecturer</>} className="hidden md:flex" />
+              <NavLink to="/attendance" label="Scanner" />
+              <NavLink to="/admin-login" label={<><Lock size={18} /> Lecturer</>} />
             </div>
           </nav>
 
@@ -72,28 +57,14 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/register" element={<Register />} />
-              
-              {/* Restricted Desktop Only Routes */}
-              <Route path="/attendance" element={
-                <DesktopOnlyRoute>
-                  <Attendance />
-                </DesktopOnlyRoute>
-              } />
-              
-              <Route path="/admin-login" element={
-                <DesktopOnlyRoute>
-                  <AdminLogin />
-                </DesktopOnlyRoute>
-              } />
-              
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
               <Route
                 path="/admin"
                 element={
-                  <DesktopOnlyRoute>
-                    <ProtectedRoute>
-                      <Admin />
-                    </ProtectedRoute>
-                  </DesktopOnlyRoute>
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
                 }
               />
             </Routes>

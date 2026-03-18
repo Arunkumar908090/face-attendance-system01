@@ -78,7 +78,7 @@ function Attendance() {
     }, []);
 
     const startVideo = () => {
-        navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
             .then(stream => {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
@@ -187,8 +187,8 @@ function Attendance() {
                         } else {
                             // Face is valid, handle liveness
                             if (stage === 'INIT') {
-                                // Sustained expressions are much more reliable than fast blinks on webcams
-                                const selected = 'SMILE';
+                                // Enforce BLINK to require strong liveness validation via Eye Aspect Ratio (EAR)
+                                const selected = 'BLINK';
                                 setLivenessChallenge(selected);
                                 setLivenessStage('CHALLENGE');
                                 newGuidance = getChallengeText(selected);
