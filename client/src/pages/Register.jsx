@@ -361,7 +361,7 @@ function Register() {
                 <h2 style={{ fontSize: '2.5rem', fontWeight: 900 }}>Biometric Enrollment</h2>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[1200px] mx-auto px-4">
 
                 {/* Form Section */}
                 <div className="card" style={{ padding: '2rem' }}>
@@ -440,7 +440,7 @@ function Register() {
 
                 {/* Camera Section */}
                 <div>
-                    <div className="video-wrapper" style={{ borderRadius: '20px', overflow: 'hidden', position: 'relative', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' }}>
+                    <div className="video-wrapper mx-auto" style={{ borderRadius: '20px', overflow: 'hidden', position: 'relative', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)', maxWidth: '100%', width: '100%' }}>
                         {cameraError ? (
                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', backdropFilter: 'blur(4px)', zIndex: 10 }}>
                                 <AlertCircle size={48} className="text-danger" style={{ marginBottom: '1rem' }} />
@@ -450,7 +450,7 @@ function Register() {
                         ) : initializing && <div style={{ position: 'absolute', inset: 0, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Initializing Biometric Sensors...</div>}
 
                         {/* Video Layer */}
-                        <video ref={videoRef} autoPlay muted playsInline style={{ width: '640px', height: 'auto', display: 'block', maxWidth: '100%' }}></video>
+                        <video ref={videoRef} autoPlay muted playsInline style={{ width: '100%', height: 'auto', display: 'block', maxWidth: '640px', margin: '0 auto' }}></video>
 
                         {/* Canvas Bounding Box Overlay */}
                         <canvas ref={canvasRef} width="640" height="480" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 5 }} />
