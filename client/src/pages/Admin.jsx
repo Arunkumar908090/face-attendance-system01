@@ -115,6 +115,7 @@ function Admin() {
         // Build query string manually since we only need simple params
         const queryParams = new URLSearchParams();
         if (search) queryParams.append('search', search);
+        queryParams.append('sort', 'name'); // Always sort alphabetically by default
         queryParams.append('page', page.toString());
         queryParams.append('limit', '10'); // Default per page
 
