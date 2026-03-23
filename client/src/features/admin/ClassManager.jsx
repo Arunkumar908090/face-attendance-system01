@@ -191,35 +191,56 @@ function ClassManager({ debouncedSearch = '', searchQuery, setSearchQuery }) {
             </div>
 
             {selectedClass && (
-                <div className="modal-overlay" onClick={() => setSelectedClassModal(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-                    <div className="card animate-up" onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-main)', width: '100%', maxWidth: '400px', borderRadius: '16px', overflow: 'hidden' }}>
-                        <div style={{ background: 'var(--border-light)', padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                                <h2 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem', fontWeight: 800 }}>{selectedClass.name}</h2>
-                                <p style={{ margin: '0.2rem 0 0', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem' }}>{selectedClass.code}</p>
+                <div className="modal-overlay animate-fade" onClick={() => setSelectedClassModal(null)} style={{ backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)' }}>
+                    <div className="modal-content animate-up" onClick={e => e.stopPropagation()} style={{ padding: '2.5rem', maxWidth: '450px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <BookOpen className="text-primary" size={24} />
+                                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-0.5px' }}>Class Details</h2>
                             </div>
-                            <button onClick={() => setSelectedClassModal(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                            <button onClick={() => setSelectedClassModal(null)} className="btn" style={{ padding: '0.5rem', background: 'var(--bg-main)', borderRadius: '50%', color: 'var(--text-secondary)' }}>
                                 <X size={20} />
                             </button>
                         </div>
-                        
-                        <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-                                        <Bookmark size={14} />
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</span>
-                                    </div>
-                                    <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>{selectedClass.department || '-'}</div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                                    <BookOpen size={14} />
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Course Title</span>
                                 </div>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-                                        <Users size={14} />
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Students Enrolled</span>
-                                    </div>
-                                    <div style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--success)' }}>{selectedClass.enrolled_count || 0}</div>
-                                </div>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-main)' }}>{selectedClass.name}</div>
                             </div>
+                            
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                                    <Hash size={14} />
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Course Code</span>
+                                </div>
+                                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)' }}>{selectedClass.code}</div>
+                            </div>
+
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                                    <Users size={14} />
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Enrolled</span>
+                                </div>
+                                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--success)' }}>{selectedClass.enrolled_count || 0}</div>
+                            </div>
+
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                                    <Bookmark size={14} />
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</span>
+                                </div>
+                                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>{selectedClass.department || '-'}</div>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '3rem' }}>
+                            <button onClick={() => setSelectedClassModal(null)} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1rem', fontWeight: 800 }}>
+                                DISMISS DETAILS
+                            </button>
                         </div>
                     </div>
                 </div>
