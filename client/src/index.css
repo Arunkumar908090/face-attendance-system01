@@ -511,12 +511,20 @@ tr:hover td {
 /* --- Mobile Responsiveness --- */
 @media (max-width: 768px) {
   .project-badge {
-    padding: 0.5rem 1rem;
-    font-size: 0.75rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    font-size: 0.65rem;
     margin-bottom: 1.5rem;
-    line-height: 1.4;
-    text-wrap: balance;
-    text-align: left;
+    white-space: nowrap;
+    justify-content: center;
+    width: 100%;
+  }
+  .project-badge svg {
+    width: 18px;
+    height: 18px;
   }
   .responsive-grid-2 {
     grid-template-columns: 1fr !important;

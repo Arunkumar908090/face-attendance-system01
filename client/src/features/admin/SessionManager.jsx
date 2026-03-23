@@ -33,6 +33,12 @@ function SessionManager({
 }) {
     const [classes, setClasses] = useState([]);
     const [selectedClass, setSelectedClass] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 15;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery]);
 
     useEffect(() => {
         const fetchClasses = async () => {
@@ -218,56 +224,82 @@ function SessionManager({
                         </tr>
                     </thead>
                     <tbody>
-                        {sessionHistory.map((hist, index) => (
-                            <tr key={hist.id} onClick={() => onGetStats(hist.id)} className="clickable animate-up" style={{ animationDelay: `${index * 0.05}s` }}>
-                                <td style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>{index + 1}</td>
-                                <td style={{ fontWeight: 800, color: 'var(--text-main)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <ChevronRight size={14} className="text-primary" />
-                                        {hist.name}
-                                    </div>
-                                </td>
-                                <td>
-                                    {hist.class_code ? <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>{hist.class_code}</span> : <span className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>GENERAL</span>}
-                                </td>
-                                <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>{new Date(hist.start_time).toLocaleString()}</td>
-                                <td>
-                                    {hist.is_active ?
-                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--success)', fontWeight: 800, fontSize: '0.7rem' }}>
-                                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} /> LIVE
-                                        </div> :
-                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontWeight: 800, fontSize: '0.7rem' }}>
-                                            ARCHIVED
-                                        </div>
-                                    }
-                                </td>
-                                <td style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onExportMatrix(hist.name); }}
-                                        className="btn btn-secondary"
-                                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}
-                                        title="Export Matrix"
-                                    >
-                                        <LogIn size={14} /> MATRIX
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onDeleteSession(hist.id); }}
-                                        className="btn btn-secondary"
-                                        style={{ padding: '0.4rem', color: 'var(--danger)' }}
-                                        title="Purge record"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {sessionHistory.length === 0 && (
-                            <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '5rem 2rem', color: 'var(--text-muted)' }}>
-                                    <div style={{ fontWeight: 500 }}>Central intelligence repository is empty.</div>
-                                </td>
-                            </tr>
-                        )}
+                        {(() => {
+                            const totalPages = Math.ceil(sessionHistory.length / itemsPerPage) || 1;
+                            const paginatedHistory = sessionHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+                            if (sessionHistory.length === 0) {
+                                return (
+                                    <tr>
+                                        <td colSpan="6" style={{ textAlign: 'center', padding: '5rem 2rem', color: 'var(--text-muted)' }}>
+                                            <div style={{ fontWeight: 500 }}>Central intelligence repository is empty.</div>
+                                        </td>
+                                    </tr>
+                                );
+                            }
+
+                            return <>
+                                {paginatedHistory.map((hist, index) => (
+                                    <tr key={hist.id} onClick={() => onGetStats(hist.id)} className="clickable animate-up" style={{ animationDelay: `${index * 0.05}s` }}>
+                                        <td style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                                        <td style={{ fontWeight: 800, color: 'var(--text-main)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <ChevronRight size={14} className="text-primary" />
+                                                {hist.name}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {hist.class_code ? <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>{hist.class_code}</span> : <span className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>GENERAL</span>}
+                                        </td>
+                                        <td style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.9rem' }}>{new Date(hist.start_time).toLocaleString()}</td>
+                                        <td>
+                                            {hist.is_active ?
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--success)', fontWeight: 800, fontSize: '0.7rem' }}>
+                                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} /> LIVE
+                                                </div> :
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontWeight: 800, fontSize: '0.7rem' }}>
+                                                    ARCHIVED
+                                                </div>
+                                            }
+                                        </td>
+                                        <td style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onExportMatrix(hist.name); }}
+                                                className="btn btn-secondary"
+                                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}
+                                                title="Export Matrix"
+                                            >
+                                                <LogIn size={14} /> MATRIX
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onDeleteSession(hist.id); }}
+                                                className="btn btn-secondary"
+                                                style={{ padding: '0.4rem', color: 'var(--danger)' }}
+                                                title="Purge record"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {totalPages > 1 && (
+                                    <tr>
+                                        <td colSpan="6">
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'var(--bg-main)' }}>
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, sessionHistory.length)} of {sessionHistory.length} entries
+                                                </span>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button className="btn btn-secondary" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}>Prev</button>
+                                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '30px', fontWeight: 600, fontSize: '0.9rem' }}>{currentPage} / {totalPages}</span>
+                                                    <button className="btn btn-secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}>Next</button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </>;
+                        })()}
                     </tbody>
                 </table>
             </div>

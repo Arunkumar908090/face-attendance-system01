@@ -28,10 +28,10 @@ function Home() {
                     </p>
 
                     <div className="flex-center button-gutter" style={{ marginBottom: '5rem' }}>
-                        <Link to="/attendance" className="btn btn-primary responsive-btn" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem', borderRadius: '50px', boxShadow: '0 0 25px var(--primary-glow)', textDecoration: 'none' }}>
+                        <Link to="/attendance" className="btn btn-primary responsive-btn hidden md:inline-flex" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem', borderRadius: '50px', boxShadow: '0 0 25px var(--primary-glow)', textDecoration: 'none' }}>
                             <Camera size={22} /> ENTER SCANNER
                         </Link>
-                        <Link to="/register" className="btn btn-secondary responsive-btn" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem', borderRadius: '50px', background: 'var(--bg-glass-strong)', backdropFilter: 'blur(10px)', border: '1px solid var(--border-light)', textDecoration: 'none', boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.05)' }}>
+                        <Link to="/register" className="btn btn-primary responsive-btn" style={{ padding: '1.2rem 3rem', fontSize: '1.1rem', borderRadius: '50px', boxShadow: '0 0 25px var(--primary-glow)', textDecoration: 'none' }}>
                             <UserPlus size={22} /> REGISTER FACE
                         </Link>
                     </div>
@@ -62,7 +62,7 @@ function Home() {
                     <div className="responsive-padding" style={{ marginTop: '5rem', textAlign: 'left', background: 'var(--bg-glass)', borderRadius: '24px', padding: '3rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)', backdropFilter: 'blur(20px)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', justifyContent: 'center' }}>
                             <HelpCircle size={32} className="text-primary" />
-                            <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>System Instructions</h2>
+                            <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>System Instructions</h2>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
@@ -103,10 +103,10 @@ function Home() {
                                 </div>
                                 <div>
                                     <h4 style={{ fontWeight: 800, fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <CheckCircle size={18} /> Scan to Verify
+                                        <CheckCircle size={18} /> Scan at Class Terminal
                                     </h4>
                                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, margin: 0 }}>
-                                        Click <strong style={{ color: 'var(--text-main)' }}>Enter Scanner</strong> to access the webcam. Ensure you are in a well-lit area. Look directly into the camera until the bounding box centers on your face and a success notification appears on screen.
+                                        Once the lecturer launches the session on the main classroom terminal, approach the webcam. Look directly into the camera until the bounding box identifies your face and a success notification appears on screen.
                                     </p>
                                 </div>
                             </div>
