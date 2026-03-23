@@ -220,6 +220,7 @@ function MobileEnroll() {
 
     const capturePhoto = (descriptorVal) => {
         if (stateRef.current.status === 'CAPTURING') return;
+        stateRef.current.status = 'CAPTURING'; // Immediately block concurrent detection loops
         setStatus('CAPTURING');
         setGuidance("Capturing...");
 

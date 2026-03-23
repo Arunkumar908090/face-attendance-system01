@@ -250,6 +250,7 @@ function Register() {
     const capturePhoto = (descriptorVal) => {
         // Prevent double capture
         if (stateRef.current.status === 'CAPTURING') return;
+        stateRef.current.status = 'CAPTURING'; // Immediately block concurrent detection loops
 
         setStatus('CAPTURING');
         setGuidance("Capturing...");
