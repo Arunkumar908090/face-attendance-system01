@@ -117,7 +117,7 @@ function Home() {
 
             {/* Footer */}
             <footer style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', borderTop: '1px solid var(--border-light)', marginTop: 'auto', fontWeight: 500 }}>
-                &copy; Facial Recognition-Based Attendance System by Duru A. Jesse. P.S. I was listening to Jhené Aiko when I finished this.
+                &copy; Facial Recognition-Based Attendance System.
             </footer>
         </div>
     );
