@@ -78,16 +78,6 @@ function Register() {
 
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
 
-    // Calculate Eye Aspect Ratio
-    const calculateEAR = (eye) => {
-        const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
-        const v1 = dist(eye[1], eye[5]);
-        const v2 = dist(eye[2], eye[4]);
-        const h = dist(eye[0], eye[3]);
-        if (h === 0) return 0;
-        return (v1 + v2) / (2.0 * h);
-    };
-
     // Bounding Box state removed, using Canvas Ref instead
 
     const videoRef = useRef();
@@ -223,24 +213,7 @@ function Register() {
                     }
 
                     if (isCentered && isBigEnough && isConfident) {
-                        if (isMobile) {
-                            const landmarks = detection.landmarks.positions;
-                            if (landmarks && landmarks.length >= 68) {
-                                const leftEye = landmarks.slice(36, 42);
-                                const rightEye = landmarks.slice(42, 48);
-                                const ear = (calculateEAR(leftEye) + calculateEAR(rightEye)) / 2.0;
-                                
-                                if (ear < 0.2) {
-                                    capturePhoto(detection.descriptor);
-                                } else {
-                                    if (stateRef.current.guidance !== "Action Required: Blink to capture") {
-                                        setGuidance("Action Required: Blink to capture");
-                                    }
-                                }
-                            }
-                        } else {
-                            capturePhoto(detection.descriptor);
-                        }
+                        capturePhoto(detection.descriptor);
                     }
                 }
             } else {
