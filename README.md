@@ -9,7 +9,7 @@ A high-precision biometric attendance application. This system features a React-
 -   **Biometrics**:
     -   **Detection & Recognition**: `face-api.js` (SSD MobileNet V1, 68 Point Face Landmark, ResNet-34 Face Recognition).
     -   **Processing**: Models run directly on the frontend edge, sending only mathematical 128-dimensional Float32 descriptor arrays to the backend for identity verification.
--   **Database**: SQLite (`better-sqlite3`).
+-   **Database**: PostgreSQL.
 
 ## Facial Recognition Pipeline
 
