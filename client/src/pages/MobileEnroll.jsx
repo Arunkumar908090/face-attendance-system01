@@ -78,7 +78,7 @@ function MobileEnroll() {
             try {
                 const cls = await api.classes.getAll();
                 setClasses(Array.isArray(cls) ? cls : []);
-                setMsg({ type: 'info', text: "Loading AI models... Please wait." });
+                setMsg({ type: 'info', text: "Loading models... Please wait." });
                 await Promise.all([
                     isMobile ? faceapi.nets.tinyFaceDetector.loadFromUri('/models') : faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
                     faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
@@ -123,24 +123,24 @@ function MobileEnroll() {
 
     const detectLoop = async () => {
         if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) {
-            detectionFrameRef.current = isMobile 
-                ? setTimeout(detectLoop, 250) 
+            detectionFrameRef.current = isMobile
+                ? setTimeout(detectLoop, 250)
                 : requestAnimationFrame(detectLoop);
             return;
         }
 
         // Use native video resolution so canvas perfectly overlays crop bounds when using objectFit cover
-        const displaySize = { 
-            width: videoRef.current.videoWidth, 
-            height: videoRef.current.videoHeight 
+        const displaySize = {
+            width: videoRef.current.videoWidth,
+            height: videoRef.current.videoHeight
         };
-        
+
         if (displaySize.width > 0 && displaySize.height > 0 && canvasRef.current) {
-            
-            const detectionOptions = isMobile 
-                ? new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }) 
+
+            const detectionOptions = isMobile
+                ? new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
                 : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
-                
+
             const detection = await faceapi.detectSingleFace(videoRef.current, detectionOptions)
                 .withFaceLandmarks()
                 .withFaceDescriptor();
@@ -201,8 +201,8 @@ function MobileEnroll() {
             }
         }
 
-        detectionFrameRef.current = isMobile 
-            ? setTimeout(detectLoop, 250) 
+        detectionFrameRef.current = isMobile
+            ? setTimeout(detectLoop, 250)
             : requestAnimationFrame(detectLoop);
     };
 
@@ -312,7 +312,7 @@ function MobileEnroll() {
         const { name, value } = e.target;
         if (name === 'name' && !/^[a-zA-Z\s]*$/.test(value)) return;
         if (name === 'matric_no' && !/^[a-zA-Z0-9/\-]*$/.test(value)) return;
-        
+
         const finalValue = name === 'name' ? value.toUpperCase() : value;
 
         if (name === 'course') {
@@ -332,7 +332,7 @@ function MobileEnroll() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
-                
+
                 {/* Form Section */}
                 <div className="card" style={{ padding: '1.5rem', width: '100%' }}>
                     {msg.text && (
@@ -345,7 +345,7 @@ function MobileEnroll() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <input name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} disabled={status !== 'IDLE'} style={{ width: '100%' }} />
                         <input name="matric_no" placeholder="Matric No" value={formData.matric_no} onChange={handleChange} disabled={status !== 'IDLE'} style={{ width: '100%' }} />
-                        
+
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <select name="level" value={formData.level} onChange={handleChange} disabled={status !== 'IDLE'} style={{ width: '35%' }}>
                                 <option value="">Level</option>
@@ -358,7 +358,7 @@ function MobileEnroll() {
                             </select>
                             <input name="department" placeholder="Dept (Auto)" value={formData.department} disabled={true} style={{ width: '65%', background: '#f1f5f9', color: '#64748b' }} />
                         </div>
-                        
+
                         <select name="course" value={formData.course} onChange={handleChange} disabled={status !== 'IDLE'} style={{ width: '100%' }}>
                             <option value="">Select a Course</option>
                             {Object.keys(courseToDepartmentMap).map(c => (
@@ -401,17 +401,17 @@ function MobileEnroll() {
                             </div>
                         )}
 
-                        <video 
-                            ref={videoRef} 
-                            autoPlay 
-                            muted 
-                            playsInline 
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }} 
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            muted
+                            playsInline
+                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block', transform: 'scaleX(-1)' }}
                         />
 
-                        <canvas 
-                            ref={canvasRef} 
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', zIndex: 5, transform: 'scaleX(-1)' }} 
+                        <canvas
+                            ref={canvasRef}
+                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', zIndex: 5, transform: 'scaleX(-1)' }}
                         />
 
                         {/* Capture Thumbnails Overlay */}
@@ -490,7 +490,7 @@ function MobileEnroll() {
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.5, margin: '0 0 1.5rem 0' }}>
                             {msg.text || (status === 'SUCCESS' ? 'Face successfully registered.' : 'Enrollment failed.')}
                         </p>
-                        <button 
+                        <button
                             className={`btn ${status === 'SUCCESS' ? 'btn-success' : 'btn-warning'}`}
                             style={{ width: '100%', padding: '1rem', borderRadius: '1rem', fontSize: '1rem', fontWeight: 800, background: status === 'SUCCESS' ? 'var(--success)' : 'var(--warning)', color: 'white', border: 'none' }}
                             onClick={() => {
