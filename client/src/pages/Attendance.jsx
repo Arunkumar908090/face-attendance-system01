@@ -57,7 +57,7 @@ function Attendance() {
                 setSession(activeSession);
 
                 // 2. Load Vision Model
-                setInitMsg("Loading AI models... Please wait.");
+                setInitMsg("Loading models... Please wait.");
                 await Promise.all([
                     isMobile ? faceapi.nets.tinyFaceDetector.loadFromUri('/models') : faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
                     faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
@@ -145,17 +145,17 @@ function Attendance() {
     const detectLoop = async () => {
         if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || stateRef.current.status === 'EXPIRED') {
             if (stateRef.current.status !== 'EXPIRED') {
-                detectionFrameRef.current = isMobile 
-                    ? setTimeout(detectLoop, 250) 
+                detectionFrameRef.current = isMobile
+                    ? setTimeout(detectLoop, 250)
                     : requestAnimationFrame(detectLoop);
             }
             return;
         }
 
-        const detectionOptions = isMobile 
-            ? new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }) 
+        const detectionOptions = isMobile
+            ? new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
             : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
-            
+
         const detection = await faceapi.detectSingleFace(videoRef.current, detectionOptions)
             .withFaceLandmarks()
             .withFaceDescriptor();
@@ -237,8 +237,8 @@ function Attendance() {
             }
         }
 
-        detectionFrameRef.current = isMobile 
-            ? setTimeout(detectLoop, 250) 
+        detectionFrameRef.current = isMobile
+            ? setTimeout(detectLoop, 250)
             : requestAnimationFrame(detectLoop);
     };
 

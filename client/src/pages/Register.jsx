@@ -109,7 +109,7 @@ function Register() {
                 setClasses(Array.isArray(cls) ? cls : []);
 
                 // 2. Load face-api.js models from '/models'
-                setMsg({ type: 'info', text: "Loading AI models... Please wait." });
+                setMsg({ type: 'info', text: "Loading models... Please wait." });
                 await Promise.all([
                     isMobile ? faceapi.nets.tinyFaceDetector.loadFromUri('/models') : faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
                     faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
@@ -155,14 +155,14 @@ function Register() {
 
     const detectLoop = async () => {
         if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) {
-            detectionFrameRef.current = isMobile 
-                ? setTimeout(detectLoop, 250) 
+            detectionFrameRef.current = isMobile
+                ? setTimeout(detectLoop, 250)
                 : requestAnimationFrame(detectLoop);
             return;
         }
 
-        const detectionOptions = isMobile 
-            ? new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }) 
+        const detectionOptions = isMobile
+            ? new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
             : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
 
         const detection = await faceapi.detectSingleFace(videoRef.current, detectionOptions)
@@ -230,8 +230,8 @@ function Register() {
             }
         }
 
-        detectionFrameRef.current = isMobile 
-            ? setTimeout(detectLoop, 250) 
+        detectionFrameRef.current = isMobile
+            ? setTimeout(detectLoop, 250)
             : requestAnimationFrame(detectLoop);
     };
 
