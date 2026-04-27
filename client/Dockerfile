@@ -4,8 +4,10 @@ FROM node:20 AS build
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml* ./
+
 RUN npm install -g pnpm
 RUN pnpm install
+RUN apt-get update && apt-get install -y curl
 
 COPY . .
 RUN pnpm build
