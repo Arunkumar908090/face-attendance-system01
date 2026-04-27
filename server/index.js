@@ -52,7 +52,7 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/classes', require('./src/routes/classRoutes'));
 
 // Serve built React frontend (MUST be after API routes)
-app.use(express.static(path.join(__dirname, '../client/dist')));
+//app.use(express.static(path.join(__dirname, '../client/dist')));
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -73,9 +73,9 @@ app.use((err, req, res, next) => {
 });
 
 // Catch-all route: serve React app for any non-API route (enables React Router)
-app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
-});
+//app.get(/.*/, (req, res) => {
+ //   res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+//});
 
 // Process Level Fatal Error Logging
 process.on('uncaughtException', (err) => {
