@@ -23,10 +23,10 @@ jobs:
       run: docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:latest ./client
 
     - name: Push Backend
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:${{ github.sha }}
 
     - name: Push Frontend
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/frontend:${{ github.sha }}
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.0
